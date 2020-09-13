@@ -3,10 +3,14 @@ name = "rastap"
 version = "0.1.0"
 authors = ["Victor R. Ruiz <vrruiz@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Astrometric solver. ASTAP algorithm in Rust."
+readme = "README.md"
+repository = "https://github.com/vrruiz/rastap"
+license = "MIT"
+include = ["src/**/*", "LICENSE", "README.md"]
 
 [dependencies]
 csv = ""
-log = ""
 env_logger = ""
+log = ""
+structopt = ""
