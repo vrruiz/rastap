@@ -2,14 +2,13 @@ use std::error::Error;
 
 use csv;
 use env_logger;
-use log::{debug};
+use log::{debug, info};
 
 const POLYGON_EDGES: usize = 4;
 
 /// Polygon structure
 struct Polygon {
     star_index: usize,
-    edges: Vec<f32>,
     star_list: Vec<usize>,
     length_list: Vec<f32>,
     center_ra_rad: f32,
@@ -17,7 +16,7 @@ struct Polygon {
 }
 
 /// Calculate the number of size of the polygon
-fn polygon_sides(polygon: usize) -> usize {
+fn polygon_connections(polygon: usize) -> usize {
     let mut sides = 0;
     for i in 1..polygon {
         sides = sides + polygon - i;
@@ -67,7 +66,7 @@ fn read_stars_from_file(ra_center: f32, dec_center: f32, radii: f32, magnitude_l
     let mut star_list: Vec<Star> = Vec::new();
     let mut reader = csv::Reader::from_path("hygfull-compact.csv")?;
     let headers = reader.headers()?;
-    debug!("{:?}", headers);
+    info!("{:?}", headers);
     for row in reader.records() {
         // Initialize record
         let mut star = Star {
@@ -79,7 +78,7 @@ fn read_stars_from_file(ra_center: f32, dec_center: f32, radii: f32, magnitude_l
             dec_rad: 0.0,
             magnitude: 0.0,
         };
-        debug!("Row: {:?}", row);
+        // debug!("Row: {:?}", row);
         let record = row?;
         // Read record data
         star.id = record.get(0).unwrap().parse::<u32>().unwrap();
@@ -102,21 +101,23 @@ fn read_stars_from_file(ra_center: f32, dec_center: f32, radii: f32, magnitude_l
     Ok(star_list)
 }
 
+/// Find polygons. For each star, the POLYGON_EDGES-1 closest stars.
 fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
     let mut polygons: Vec<Polygon> = Vec::new();
-    let pol_sides = polygon_sides(POLYGON_EDGES);
+    let conn_number = polygon_connections(POLYGON_EDGES);
     if star_list.len() < POLYGON_EDGES {
+        // Not enough stars for the polygon
         return None;
     }
-    // For each star find the POLYGON_EDGES closest stars
+    // For each star find the POLYGON_EDGES - 1 closest stars
     for (id_a, star_a) in star_list.iter().enumerate() {
-        println!("Searching: star id {}", star_a.id);
-        let mut dist_vec = vec![f32::MAX; POLYGON_EDGES];
+        debug!("Find polygon > Searching for star i:{} id:({})", id_a, star_a.id);
         let mut star_vec = vec![0_usize; POLYGON_EDGES];
-        let mut polygon_vec = vec![0_f32; pol_sides];
-        // First node of the polygon is the star itself
+        let mut length_vec = vec![0_f32; conn_number];
+        let mut dist_vec = vec![f32::MAX; POLYGON_EDGES];
         for (id_b, star_b) in star_list.iter().enumerate() {
             if id_a != id_b {
+                // First vertex of the polygon is the star itself, skip
                 // Calculate distance between the stars
                 let distance = star_distance_rad(star_a, star_b);
                 // Compare this distance with the current list of closest stars
@@ -142,8 +143,8 @@ fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
         star_vec.pop();
         dist_vec.insert(0, 0.0);
         dist_vec.pop();
-        println!("Star vec {:?}", star_vec);
-        println!("Dist vec {:?}", dist_vec);
+        debug!("  Star vec {:?}", star_vec);
+        debug!("  Dist vec {:?}", dist_vec);
         // Calculate center of the polygon
         let mut center_ra_rad = 0.0;
         let mut center_dec_rad = 0.0;
@@ -156,39 +157,44 @@ fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
         // Don't store if polygon already exists
         let mut polygon_exists = false;
         'hexist: for h in polygons.iter() {
-            // TODO round
             if h.center_ra_rad == center_ra_rad && h.center_dec_rad == center_dec_rad {
-                println!("!!! Polygon exists: {} = {}", id_a, h.star_index);
+                debug!("  !! Polygon already exists: {} = {}", id_a, h.star_index);
                 polygon_exists = true;
                 break 'hexist;
             }
         }
         if !polygon_exists {
-            // Calculate the lengths of the polygon
+            // Calculate the lengths of the polygon connections
             let mut k = 0;
             for i in 0..star_vec.len() - 1 {
-                let star_a = &star_list[i];
+                let star_a = &star_list[star_vec[i]];
+                debug!("  Exists - i:{} star_a:{}", i, star_vec[i]);
                 for n in (i + 1)..star_vec.len() {
                     // Calculate distance between the stars
                     let star_b = &star_list[star_vec[n]];
-                    let distance = star_distance_rad(star_a, star_b);
-                    polygon_vec[k] = distance;
+                    let length = star_distance_rad(star_a, star_b);
+                    debug!("  Exists - {} length from {} to {} = {}", k, i, n, length);
+                    if length == 0.0 {
+                        debug!("  Exists - {} length 0. star_a:{:?} star_b:{:?}", k, star_vec[i], star_vec[n]);
+                    }
+                    length_vec[k] = length;
                     k += 1;
                 }
             }
             // Sort: https://users.rust-lang.org/t/how-to-sort-a-vec-of-floats/2838
-            polygon_vec.sort_by(|a, b| a.partial_cmp(b).unwrap()); 
-            // Normalize the length of the polygon by the longest length
-            for i in 0..polygon_vec.len() {
-                polygon_vec[i] /= polygon_vec[polygon_vec.len() - 1];
+            length_vec.sort_by(|a, b| a.partial_cmp(b).unwrap()); 
+            // Normalize the length of the connections by the longest length
+            let longest_length = length_vec[length_vec.len() - 1];
+            for i in 0..length_vec.len() {
+                length_vec[i] = length_vec[i] / longest_length;
             }
-            debug!("Length vec: {:?}", polygon_vec);        
+            length_vec[0] = longest_length;
+            debug!("  Length vec: {:?}, longest_length (rad): {}", length_vec, longest_length);
             // Store polygon data
             let polygon = Polygon {
                 star_index: id_a,
-                edges: dist_vec,
                 star_list: star_vec,
-                length_list: polygon_vec,
+                length_list: length_vec,
                 center_ra_rad: center_ra_rad,
                 center_dec_rad: center_dec_rad,
             };
@@ -203,7 +209,7 @@ fn main() {
     env_logger::init();
 
     let mut star_list: Vec<Star> = Vec::new();
-    match read_stars_from_file(0.0, 0.0, 15.0, 5.0) {
+    match read_stars_from_file(0.0, 0.0, 5.0, 10.0) {
         Ok(star_list_read) => {
             star_list = star_list_read;
         }
@@ -215,11 +221,10 @@ fn main() {
     match find_polygons(&star_list) {
         Some(polygons) => {
             for polygon in polygons {
-                println!("{}-hedron for star {}: {:?} {:?}", POLYGON_EDGES, polygon.star_index, polygon.edges, polygon.star_list);
+                println!("{}-gon for star {}: {:?} {:?}", POLYGON_EDGES, polygon.star_index, polygon.length_list, polygon.star_list);
             }
         },
         None => println!("None")
     }
     println!("Star list length: {}", star_list.len());
-
 }
