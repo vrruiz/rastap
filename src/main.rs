@@ -14,18 +14,64 @@ mod math;
 mod polygon;
 mod sextractor;
 
+/// Command line arguments
 #[derive(Debug, StructOpt)]
 #[structopt(about)]
 struct Cli {
+    /// Right Ascension center of search in hours and decimals (hh.xx)
+    #[structopt(long = "ra")]
+    ra_deg: f32,
+
+    /// Declination center of search in degrees and decimals (dd.xx)
+    #[structopt(long = "dec")]
+    dec_deg: f32,
+
+    /// Search radii in degrees and decimals (dd.xx)
+    #[structopt(long = "radii")]
+    radii_deg: f32,
+
+    /// Limiting magnitud
+    #[structopt(long = "male", default_value="10.0")]
+    male: f32,
+
     /// Path to sextractor file.
-    #[structopt(name = "sex-file", parse(from_os_str))]
-    sex_file: PathBuf,
+    #[structopt(long = "sex-csv", parse(from_os_str))]
+    sex_csv: PathBuf,
+
+    /// Image scale in pixels per arcsecond
+    #[structopt(short,long)]
+    scale: f32,
 }
 
 impl Cli {
-    /// Gets the path to the input XISF file.
-    pub fn sex_file(&self) -> &Path {
-        self.sex_file.as_path()
+    /// Gets the search center Right Ascension (R.A.)
+    pub fn ra_deg(&self) -> f32 {
+        self.ra_deg
+    }
+
+    /// Gets the search center Declination (Dec)
+    pub fn dec_deg(&self) -> f32 {
+        self.dec_deg
+    }
+
+    /// Gets the search radii (Dec)
+    pub fn radii_deg(&self) -> f32 {
+        self.radii_deg
+    }
+
+    /// Gets the search radii (Dec)
+    pub fn male(&self) -> f32 {
+        self.male
+    }
+
+    /// Gets the path to the input sextractor file.
+    pub fn sex_csv(&self) -> &Path {
+        self.sex_csv.as_path()
+    }
+
+    /// Gets the image scale in pixels per arcsecond.
+    pub fn scale(&self) -> f32 {
+        self.scale
     }
 }
 
@@ -38,7 +84,7 @@ fn main() -> io::Result<()> {
 
     // Read star database (HYG) file
     let mut star_list: Vec<polygon::Star> = Vec::new();
-    match hyg::read_stars_from_file(0.0, 0.0, 5.0, 10.0) {
+    match hyg::read_stars_from_file(cli.ra_deg(), cli.dec_deg(), cli.radii_deg(), cli.male()) {
         Ok(star_list_read) => {
             star_list = star_list_read;
         }
@@ -59,7 +105,7 @@ fn main() -> io::Result<()> {
 
     // Read list
     let mut image_star_list: Vec<image::ImageStar> = Vec::new();
-    match sextractor::read_image_stars_from_file(cli.sex_file()) {
+    match sextractor::read_image_stars_from_file(cli.sex_csv()) {
         Ok(image_star_list_read) => {
             for star in &image_star_list_read {
                 println!("Image Star x:{} y:{} mag:{}", star.pixel_x, star.pixel_y, star.magnitude);
