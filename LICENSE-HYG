@@ -1,0 +1,23 @@
+HYG Database by David Nash
+--------------------------
+
+hygfull-compact.csv file is based on HYG star database, available at:
+
+- http://www.astronexus.com/hyg
+- https://github.com/astronexus
+
+
+About the HYG Database
+----------------------
+
+The database is a subset of the data in three major catalogs: the
+Hipparcos Catalog,the Yale Bright Star Catalog (5th Edition), and the
+Gliese Catalog of Nearby Stars (3rd Edition).
+
+
+License
+-------
+
+This data set is licensed by a Creative Commons Attribution-ShareAlike
+license. For more details, read the Creative Commons page
+(https://creativecommons.org/licenses/by-sa/2.5/)
