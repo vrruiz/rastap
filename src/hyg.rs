@@ -7,7 +7,7 @@ use crate::math;
 use crate::polygon;
 
 /// Reads HYG star database CSV file to memory
-pub fn read_stars_from_file(ra_center: f32, dec_center: f32, radii: f32, magnitude_limit: f32) -> Result<Vec<polygon::Star>, Box<dyn Error>> {
+pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitude_limit: f64) -> Result<Vec<polygon::Star>, Box<dyn Error>> {
     let ra_center_rad = math::hours_to_radians(ra_center);
     let dec_center_rad = math::degrees_to_radians(dec_center.to_radians());
     let radii_rad = math::degrees_to_radians(radii);
@@ -33,9 +33,9 @@ pub fn read_stars_from_file(ra_center: f32, dec_center: f32, radii: f32, magnitu
         // Read record data
         star.id = record.get(0).unwrap().parse::<u32>().unwrap();
         star.hip = record.get(1).unwrap().parse::<u32>().unwrap();
-        star.ra = record.get(2).unwrap().parse::<f32>().unwrap();
-        star.dec = record.get(3).unwrap().parse::<f32>().unwrap();
-        star.magnitude = record.get(4).unwrap().parse::<f32>().unwrap();
+        star.ra = record.get(2).unwrap().parse::<f64>().unwrap();
+        star.dec = record.get(3).unwrap().parse::<f64>().unwrap();
+        star.magnitude = record.get(4).unwrap().parse::<f64>().unwrap();
         // Transform degrees/hours to radians
         star.ra_rad = math::hours_to_radians(star.ra);
         star.dec_rad = math::degrees_to_radians(star.dec);

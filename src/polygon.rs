@@ -6,20 +6,20 @@ pub const POLYGON_EDGES: usize = 4;
 pub struct Star {
     pub id: u32,
     pub hip: u32,
-    pub ra: f32,
-    pub dec: f32,
-    pub ra_rad: f32,
-    pub dec_rad: f32,
-    pub magnitude: f32
+    pub ra: f64,
+    pub dec: f64,
+    pub ra_rad: f64,
+    pub dec_rad: f64,
+    pub magnitude: f64
 }
 
 /// Polygon structure
 pub struct Polygon {
     pub star_index: usize,
     pub star_list: Vec<usize>,
-    pub length_list: Vec<f32>,
-    pub center_ra_rad: f32,
-    pub center_dec_rad: f32,
+    pub length_list: Vec<f64>,
+    pub center_ra_rad: f64,
+    pub center_dec_rad: f64,
 }
 
 /// Calculate the number of vertex connections of a polygon
@@ -32,7 +32,7 @@ pub fn polygon_connections(polygon: usize) -> usize {
 }
 
 /// Calculate star distance between two stars
-pub fn star_distance_rad(star_a: &Star, star_b: &Star) -> f32 {
+pub fn star_distance_rad(star_a: &Star, star_b: &Star) -> f64 {
     ((star_b.ra_rad - star_a.ra_rad).abs()).sqrt() + ((star_b.dec_rad - star_a.dec_rad).abs()).sqrt()
 }
 
@@ -48,8 +48,8 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
     for (id_a, star_a) in star_list.iter().enumerate() {
         debug!("Find polygon > Searching for star i:{} id:({})", id_a, star_a.id);
         let mut star_vec = vec![0_usize; POLYGON_EDGES];
-        let mut length_vec = vec![0_f32; conn_number];
-        let mut dist_vec = vec![f32::MAX; POLYGON_EDGES];
+        let mut length_vec = vec![0_f64; conn_number];
+        let mut dist_vec = vec![f64::MAX; POLYGON_EDGES];
         for (id_b, star_b) in star_list.iter().enumerate() {
             if id_a != id_b {
                 // First vertex of the polygon is the star itself, skip
@@ -87,8 +87,8 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
             center_ra_rad += star_list[*star_id].ra_rad;
             center_dec_rad += star_list[*star_id].dec_rad;
         }
-        center_ra_rad = center_ra_rad / POLYGON_EDGES as f32;
-        center_dec_rad = center_dec_rad / POLYGON_EDGES as f32;
+        center_ra_rad = center_ra_rad / POLYGON_EDGES as f64;
+        center_dec_rad = center_dec_rad / POLYGON_EDGES as f64;
         // Don't store if polygon already exists
         let mut polygon_exists = false;
         'hexist: for h in polygons.iter() {
@@ -112,7 +112,7 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
                     if length == 0.0 {
                         debug!("  Exists - {} length 0. star_a:{:?} star_b:{:?}", k, star_vec[i], star_vec[n]);
                     }
-                    length_vec[k] = length;
+                    length_vec[k] = length as f64;
                     k += 1;
                 }
             }
@@ -137,4 +137,26 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
         }
     }
     Some(polygons)
+}
+
+/// Compare star database and image polygons
+pub fn find_fit(image_polygons: &Vec<Polygon>, star_polygons: &Vec<Polygon>) {
+    const TOLERANCE: f64 = 0.01;
+
+    debug!("Find fit > Searching similar polygons");
+    for image_pol in image_polygons.iter() {
+        for star_pol in star_polygons.iter() {
+                let mut similar = true;
+                'length: for i in 1..star_pol.length_list.len() - 1 {
+                    // Compare the edge lengths. Discard if tolerance is exceeded.
+                    if (image_pol.length_list[i] - star_pol.length_list[i]).abs() > TOLERANCE {
+                        similar = false;
+                        break 'length;
+                    }
+                }
+                if similar == true {
+                    println!("Find fit > Similar polygon found\n  image_pol:{:?}\n   star_pol:{:?}", image_pol.length_list, star_pol.length_list);
+                }
+        }
+    }
 }

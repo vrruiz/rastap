@@ -20,19 +20,19 @@ mod sextractor;
 struct Cli {
     /// Right Ascension center of search in hours and decimals (hh.xx)
     #[structopt(long = "ra")]
-    ra_deg: f32,
+    ra_deg: f64,
 
     /// Declination center of search in degrees and decimals (dd.xx)
     #[structopt(long = "dec")]
-    dec_deg: f32,
+    dec_deg: f64,
 
     /// Search radii in degrees and decimals (dd.xx)
     #[structopt(long = "radii")]
-    radii_deg: f32,
+    radii_deg: f64,
 
     /// Limiting magnitud
     #[structopt(long = "male", default_value="10.0")]
-    male: f32,
+    male: f64,
 
     /// Path to sextractor file.
     #[structopt(long = "sex-csv", parse(from_os_str))]
@@ -40,27 +40,27 @@ struct Cli {
 
     /// Image scale in pixels per arcsecond
     #[structopt(short,long)]
-    scale: f32,
+    scale: f64,
 }
 
 impl Cli {
     /// Gets the search center Right Ascension (R.A.)
-    pub fn ra_deg(&self) -> f32 {
+    pub fn ra_deg(&self) -> f64 {
         self.ra_deg
     }
 
     /// Gets the search center Declination (Dec)
-    pub fn dec_deg(&self) -> f32 {
+    pub fn dec_deg(&self) -> f64 {
         self.dec_deg
     }
 
     /// Gets the search radii (Dec)
-    pub fn radii_deg(&self) -> f32 {
+    pub fn radii_deg(&self) -> f64 {
         self.radii_deg
     }
 
     /// Gets the search radii (Dec)
-    pub fn male(&self) -> f32 {
+    pub fn male(&self) -> f64 {
         self.male
     }
 
@@ -70,7 +70,7 @@ impl Cli {
     }
 
     /// Gets the image scale in pixels per arcsecond.
-    pub fn scale(&self) -> f32 {
+    pub fn scale(&self) -> f64 {
         self.scale
     }
 }
@@ -84,6 +84,7 @@ fn main() -> io::Result<()> {
 
     // Read star database (HYG) file
     let mut star_list: Vec<polygon::Star> = Vec::new();
+    let mut star_polygons: Vec<polygon::Polygon> = Vec::new();
     match hyg::read_stars_from_file(cli.ra_deg(), cli.dec_deg(), cli.radii_deg(), cli.male()) {
         Ok(star_list_read) => {
             star_list = star_list_read;
@@ -95,9 +96,10 @@ fn main() -> io::Result<()> {
     }
     match polygon::find_polygons(&star_list) {
         Some(polygons) => {
-            for polygon in polygons {
+            for polygon in &polygons {
                 println!("{}-gon for star {}: {:?} {:?}", polygon::POLYGON_EDGES, polygon.star_index, polygon.length_list, polygon.star_list);
             }
+            star_polygons = polygons;
         },
         None => println!("None")
     }
@@ -105,20 +107,22 @@ fn main() -> io::Result<()> {
 
     // Read list
     let mut image_star_list: Vec<image::ImageStar> = Vec::new();
+    let mut image_polygons: Vec<polygon::Polygon> = Vec::new();
     match sextractor::read_image_stars_from_file(cli.sex_csv()) {
         Ok(image_star_list_read) => {
             for star in &image_star_list_read {
                 println!("Image Star x:{} y:{} mag:{}", star.pixel_x, star.pixel_y, star.magnitude);
             }
-            let pol_star_list = image::image_star_to_polygon(&image_star_list_read, 1.90);
+            let pol_star_list = image::image_star_to_polygon(&image_star_list_read, cli.scale());
             for star in &pol_star_list {
                 println!("Polygon Star: x:{} y:{} mag:{}", star.ra_rad, star.dec_rad, star.magnitude);
             }
             match polygon::find_polygons(&pol_star_list) {
-                Some(image_polygons) => {
-                    for pol in image_polygons {
+                Some(polygons) => {
+                    for pol in &polygons {
                         println!("{}-gon for star {}: {:?} {:?}", polygon::POLYGON_EDGES, pol.star_index, pol.length_list, pol.star_list);
                     }
+                    image_polygons = polygons;
                 },
                 None => println!("Couldn't find polygons in the image")
             }
@@ -126,7 +130,10 @@ fn main() -> io::Result<()> {
         }
         Err(err) => println!("Error reading image star list: {}", err)
     }
-    println!("Image list length: {}", star_list.len());
- 
+    println!("Image list length: {}", image_star_list.len());
+
+    // Compare star database and image polygons
+    println!("Searching similarities");
+    polygon::find_fit(&image_polygons, &star_polygons);
     Ok(())
 }
