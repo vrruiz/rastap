@@ -29,7 +29,7 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
 
     // Read database
     let mut star_list: Vec<polygon::Star> = Vec::new();
-    let file = File::open("/home/rvr/archivos/astro/gaia/gaia-dr2.db").unwrap();
+    let file = File::open("mini-gaia-dr2.db").unwrap();
     let mut reader = BufReader::new(file); // Buffered read
     let mut star_bin = [0u8;28];
     let mut n = 0u64;
