@@ -21,7 +21,7 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
         // Initialize record
         let mut star = polygon::Star {
             id: 0,
-            hip: 0,
+            db_id: 0,
             ra: 0.0,
             dec: 0.0,
             ra_rad: 0.0,
@@ -31,8 +31,8 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
         // debug!("Row: {:?}", row);
         let record = row?;
         // Read record data
-        star.id = record.get(0).unwrap().parse::<u32>().unwrap();
-        star.hip = record.get(1).unwrap().parse::<u32>().unwrap();
+        star.id = record.get(0).unwrap().parse::<u32>().unwrap() as u64;
+        star.db_id = record.get(1).unwrap().parse::<u32>().unwrap() as u64;
         star.ra = record.get(2).unwrap().parse::<f64>().unwrap();
         star.dec = record.get(3).unwrap().parse::<f64>().unwrap();
         star.magnitude = record.get(4).unwrap().parse::<f64>().unwrap();
@@ -48,5 +48,7 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
             star_list.push(star);
         }
     }
+    // Sort by magnitude
+    star_list.sort_by(|a, b| a.magnitude.partial_cmp(&b.magnitude).unwrap());
     Ok(star_list)
 }

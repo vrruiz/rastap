@@ -28,9 +28,9 @@ pub fn read_image_stars_from_file(path: &Path) -> Result<Vec<ImageStar>, Box<dyn
         star.pixel_x = record.get(0).unwrap().parse::<f64>().unwrap();
         star.pixel_y = record.get(1).unwrap().parse::<f64>().unwrap();
         star.magnitude = record.get(2).unwrap().parse::<f64>().unwrap();
-        // Sort by magnitude
-        star_list.sort_by(|a, b| b.magnitude.partial_cmp(&a.magnitude).unwrap());
         star_list.push(star);
     }
+    // Sort by magnitude
+    star_list.sort_by(|a, b| b.magnitude.partial_cmp(&a.magnitude).unwrap());
     Ok(star_list)
 }

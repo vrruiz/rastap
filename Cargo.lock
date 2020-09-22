@@ -221,6 +221,7 @@ dependencies = [
 name = "rastap"
 version = "0.1.0"
 dependencies = [
+ "byteorder",
  "csv",
  "env_logger",
  "log",

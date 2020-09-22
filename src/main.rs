@@ -8,6 +8,7 @@ use structopt::StructOpt;
 use env_logger;
 use log::{debug};
 
+mod gaia_db;
 mod hyg;
 mod image;
 mod math;
@@ -75,25 +76,17 @@ impl Cli {
     }
 }
 
-fn main() -> io::Result<()> {
-    // Init logger
-    env_logger::builder().format_timestamp(None).init();
- 
-    // CLI interface information.
-    let cli = Cli::from_args();
-
-    // Read star database (HYG) file
-    let mut star_list: Vec<polygon::Star> = Vec::new();
+// Find polygons
+fn find_polygons_and_fit(star_list: Vec<polygon::Star>, image_star_list: Vec<image::ImageStar>, scale: f64) {
     let mut star_polygons: Vec<polygon::Polygon> = Vec::new();
-    match hyg::read_stars_from_file(cli.ra_deg(), cli.dec_deg(), cli.radii_deg(), cli.male()) {
-        Ok(star_list_read) => {
-            star_list = star_list_read;
-        }
-        Err(err) => println!("Error {:?}", err),
-    }
-    for star in &star_list {
-        println!("Star id:{}\thip:{}\tra:{} \tdec:{}\tmagnitude:{}", star.id, star.hip, star.ra, star.dec, star.magnitude);
-    }
+    let mut image_polygons: Vec<polygon::Polygon> = Vec::new();
+
+    // Convert list to ImageStar
+    let pol_star_list = image::image_star_to_polygon(&image_star_list, scale);
+    // Limit list
+    // pol_star_list.truncate(image_star_list.len());
+
+    // Find star polygons
     match polygon::find_polygons(&star_list) {
         Some(polygons) => {
             for polygon in &polygons {
@@ -104,27 +97,62 @@ fn main() -> io::Result<()> {
         None => println!("None")
     }
     println!("Star list length: {}", star_list.len());
+    for star in &pol_star_list {
+        println!("Polygon Star: x:{} y:{} mag:{}", star.ra_rad, star.dec_rad, star.magnitude);
+    }
 
-    // Read list
+    // Find image polygons
+    match polygon::find_polygons(&pol_star_list) {
+        Some(polygons) => {
+            println!("POL,pixel1_x,pixel1_y,pixel2_x,pixel2_y,pixel3_x,pixel3_y,pixel4_x,pixel4_y");
+            'finish: for (n, pol) in polygons.iter().enumerate() {
+                println!("{}-gon for star {}: {:?} {:?}", polygon::POLYGON_EDGES, pol.star_index, pol.length_list, pol.star_list);
+                let mut pol_string = "".to_owned();
+                for (i, star) in pol.star_list.iter().enumerate() {
+                    if i > 0 {
+                        pol_string.push_str(",");
+                    }
+                    let coordinates = format!("{},{}", image_star_list[*star].pixel_x, image_star_list[*star].pixel_y);
+                    pol_string.push_str(&coordinates);
+                }
+                println!("POL,{}", pol_string);
+            }
+            image_polygons = polygons;
+        },
+        None => println!("Couldn't find polygons in the image")
+    }
+
+    // Compare star database and image polygons
+    println!("Searching similarities");
+    polygon::find_fit(&image_polygons, &star_polygons);
+}
+
+fn main() -> io::Result<()> {
+    // Init logger
+    env_logger::builder().format_timestamp(None).init();
+ 
+    // CLI interface information.
+    let cli = Cli::from_args();
+
+    // Read star database (Mini Gaia DR2) file
+    let mut star_list: Vec<polygon::Star> = Vec::new();
+
+    match gaia_db::read_stars_from_file(cli.ra_deg(), cli.dec_deg(), cli.radii_deg(), cli.male()) {
+        Ok(star_list_read) => {
+            star_list = star_list_read;
+        }
+        Err(err) => println!("Error {:?}", err),
+    }
+    for star in &star_list {
+        println!("Star id:{}\tdb_id:{}\tra:{} \tdec:{}\tmagnitude:{}", star.id, star.db_id, star.ra, star.dec, star.magnitude);
+    }
+
+    // Read star coordinates from sextractor
     let mut image_star_list: Vec<image::ImageStar> = Vec::new();
-    let mut image_polygons: Vec<polygon::Polygon> = Vec::new();
     match sextractor::read_image_stars_from_file(cli.sex_csv()) {
         Ok(image_star_list_read) => {
             for star in &image_star_list_read {
                 println!("Image Star x:{} y:{} mag:{}", star.pixel_x, star.pixel_y, star.magnitude);
-            }
-            let pol_star_list = image::image_star_to_polygon(&image_star_list_read, cli.scale());
-            for star in &pol_star_list {
-                println!("Polygon Star: x:{} y:{} mag:{}", star.ra_rad, star.dec_rad, star.magnitude);
-            }
-            match polygon::find_polygons(&pol_star_list) {
-                Some(polygons) => {
-                    for pol in &polygons {
-                        println!("{}-gon for star {}: {:?} {:?}", polygon::POLYGON_EDGES, pol.star_index, pol.length_list, pol.star_list);
-                    }
-                    image_polygons = polygons;
-                },
-                None => println!("Couldn't find polygons in the image")
             }
             image_star_list = image_star_list_read;
         }
@@ -132,8 +160,10 @@ fn main() -> io::Result<()> {
     }
     println!("Image list length: {}", image_star_list.len());
 
-    // Compare star database and image polygons
-    println!("Searching similarities");
-    polygon::find_fit(&image_polygons, &star_polygons);
+    // If stars found on the image, then find and match the polygons
+    if image_star_list.len() > 10 {
+        find_polygons_and_fit(star_list, image_star_list, cli.scale());
+    }
+ 
     Ok(())
 }

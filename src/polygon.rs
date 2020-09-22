@@ -1,16 +1,18 @@
 use log::{debug};
 
 pub const POLYGON_EDGES: usize = 4;
+pub const TOLERANCE: f64 = 0.01;
 
 /// Star data structure
+#[derive(Clone)]
 pub struct Star {
-    pub id: u32,
-    pub hip: u32,
-    pub ra: f64,
-    pub dec: f64,
-    pub ra_rad: f64,
-    pub dec_rad: f64,
-    pub magnitude: f64
+    pub id: u64,
+    pub db_id: u64,    // Catalogue reference
+    pub ra: f64,       // Right Ascension (R.A.)
+    pub dec: f64,      // Declination (Dec)
+    pub ra_rad: f64,   // R.A. in radians
+    pub dec_rad: f64,  // Dec in radians
+    pub magnitude: f64 // Magnitude
 }
 
 /// Polygon structure
@@ -141,22 +143,34 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
 
 /// Compare star database and image polygons
 pub fn find_fit(image_polygons: &Vec<Polygon>, star_polygons: &Vec<Polygon>) {
-    const TOLERANCE: f64 = 0.01;
-
     debug!("Find fit > Searching similar polygons");
+    let mut n = 0; // Number of similar polygons found
     for image_pol in image_polygons.iter() {
         for star_pol in star_polygons.iter() {
                 let mut similar = true;
                 'length: for i in 1..star_pol.length_list.len() - 1 {
                     // Compare the edge lengths. Discard if tolerance is exceeded.
-                    if (image_pol.length_list[i] - star_pol.length_list[i]).abs() > TOLERANCE {
+                    let a = image_pol.length_list[i];
+                    let b = star_pol.length_list[i];
+                    let mut difference;
+                    if a > b {
+                        difference = b / a;
+                    } else {
+                        difference = a / b;
+                    }
+                    if difference < 0.99 {
+                        // debug!("difference: {} a:{} b:{} false", difference, a, b);
                         similar = false;
                         break 'length;
+                    } else {
+                        // debug!("difference: {} a:{} b:{} true", difference, a, b);
                     }
                 }
                 if similar == true {
                     println!("Find fit > Similar polygon found\n  image_pol:{:?}\n   star_pol:{:?}", image_pol.length_list, star_pol.length_list);
+                    n += 1;
                 }
         }
     }
+    debug!("Found {} similar polygons", n);
 }
