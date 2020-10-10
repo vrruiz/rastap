@@ -1,10 +1,10 @@
 # RASTAP
 
-This is a [https://www.rust-lang.org/](Rust) implementation of the ASTAP
+This is a [Rust](https://www.rust-lang.org/) implementation of the ASTAP
 astrometric solving algorithm.
 
 # ASTAP
 
-- [https://www.hnsky.org/astap.htm](ASTAP) by Han Klejin. Lazarus/FreePascal (GPLv3+).
+- [ASTAP](https://www.hnsky.org/astap.htm) by Han Klejin. Lazarus/FreePascal (GPLv3+).
 
-- Documentation: [https://www.hnsky.org/astap_astrometric_solving.htm](ASTAP astrometric plate solving method).
+- Documentation: [ASTAP astrometric plate solving method](https://www.hnsky.org/astap_astrometric_solving.htm).
