@@ -131,7 +131,7 @@ fn main() -> io::Result<()> {
     // Init logger
     env_logger::builder().format_timestamp(None).init();
  
-    // CLI interface information.
+    // CLI interface information
     let cli = Cli::from_args();
 
     // Read star database (Mini Gaia DR2) file
@@ -159,6 +159,9 @@ fn main() -> io::Result<()> {
         Err(err) => println!("Error reading image star list: {}", err)
     }
     println!("Image list length: {}", image_star_list.len());
+
+    star_list.truncate(500);
+    image_star_list.truncate(500);
 
     // If stars found on the image, then find and match the polygons
     if image_star_list.len() > 10 {

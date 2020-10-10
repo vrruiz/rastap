@@ -125,7 +125,7 @@ pub fn find_polygons(star_list: &Vec<Star>) -> Option<Vec<Polygon>> {
             for i in 0..length_vec.len() {
                 length_vec[i] = length_vec[i] / longest_length;
             }
-            length_vec[0] = longest_length;
+            // length_vec[0] = longest_length;
             debug!("  Length vec: {:?}, longest_length (rad): {}", length_vec, longest_length);
             // Store polygon data
             let polygon = Polygon {
@@ -147,29 +147,32 @@ pub fn find_fit(image_polygons: &Vec<Polygon>, star_polygons: &Vec<Polygon>) {
     let mut n = 0; // Number of similar polygons found
     for image_pol in image_polygons.iter() {
         for star_pol in star_polygons.iter() {
-                let mut similar = true;
-                'length: for i in 1..star_pol.length_list.len() - 1 {
-                    // Compare the edge lengths. Discard if tolerance is exceeded.
-                    let a = image_pol.length_list[i];
-                    let b = star_pol.length_list[i];
-                    let mut difference;
-                    if a > b {
-                        difference = b / a;
-                    } else {
-                        difference = a / b;
-                    }
-                    if difference < 0.99 {
-                        // debug!("difference: {} a:{} b:{} false", difference, a, b);
-                        similar = false;
-                        break 'length;
-                    } else {
-                        // debug!("difference: {} a:{} b:{} true", difference, a, b);
-                    }
+            let mut diff_list = Vec::new();
+            diff_list.resize(star_pol.length_list.len(), 0.0);
+            let mut similar = true;
+            'length: for i in 0..star_pol.length_list.len() - 1 {
+                // Compare the edge lengths. Discard if tolerance is exceeded.
+                let a = image_pol.length_list[i];
+                let b = star_pol.length_list[i];
+                let mut difference;
+                if a > b {
+                    difference = b / a;
+                } else {
+                    difference = a / b;
                 }
-                if similar == true {
-                    println!("Find fit > Similar polygon found\n  image_pol:{:?}\n   star_pol:{:?}", image_pol.length_list, star_pol.length_list);
-                    n += 1;
+                diff_list[i] = difference;
+                if difference < 0.99 {
+                    // debug!("difference: {} a:{} b:{} false", difference, a, b);
+                    similar = false;
+                    break 'length;
+                } else {
+                    // debug!("difference: {} a:{} b:{} true", difference, a, b);
                 }
+            }
+            if similar == true {
+                println!("Find fit > Similar polygon found\n  image_pol:{:?}\n   star_pol:{:?}\n difference:{:?}", image_pol.length_list, star_pol.length_list, diff_list);
+                n += 1;
+            }
         }
     }
     debug!("Found {} similar polygons", n);
