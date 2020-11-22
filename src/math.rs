@@ -1,9 +1,4 @@
-/// Convert degrees (declination) to radians
-pub fn degrees_to_radians(degrees: f64) -> f64 {
-    degrees * 0.017453292519943295769236907684886
-}
-
-/// Convert hours (right ascension) to radians
+///  Hours (right ascension) to radians
 pub fn hours_to_radians(hours: f64) -> f64 {
     hours * 0.26179938779914943653855361527329
 }

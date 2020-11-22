@@ -154,7 +154,7 @@ pub fn find_fit(image_polygons: &Vec<Polygon>, star_polygons: &Vec<Polygon>) {
                 // Compare the edge lengths. Discard if tolerance is exceeded.
                 let a = image_pol.length_list[i];
                 let b = star_pol.length_list[i];
-                let mut difference;
+                let difference;
                 if a > b {
                     difference = b / a;
                 } else {

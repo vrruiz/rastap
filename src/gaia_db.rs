@@ -1,9 +1,9 @@
-use std::error::Error;
-use std::fs::File;
-use std::io::BufReader;
-use std::io::Read;
-use std::mem;
-use std::result::Result;
+use std::{
+    error::Error,
+    fs::File,
+    io::{BufReader, Read},
+    result::Result
+};
 use log::{debug};
 
 use byteorder::ByteOrder;
@@ -24,8 +24,8 @@ use crate::polygon;
 /// Reads Gaia DR2 star database CSV file to memory
 pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitude_limit: f64) -> Result<Vec<polygon::Star>, Box<dyn Error>> {
     let ra_center_rad = math::hours_to_radians(ra_center);
-    let dec_center_rad = math::degrees_to_radians(dec_center);
-    let radii_rad = math::degrees_to_radians(radii);
+    let dec_center_rad = dec_center.to_radians();
+    let radii_rad = radii.to_radians();
 
     // Read database
     let mut star_list: Vec<polygon::Star> = Vec::new();
@@ -53,7 +53,7 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
         };
         // Transform degrees/hours to radians
         star.ra_rad = math::hours_to_radians(star.ra);
-        star.dec_rad = math::degrees_to_radians(star.dec);
+        star.dec_rad = star.dec.to_radians();
         // Calculate angular separation between star and center
         let sep_rad = math::angular_separation_radians(ra_center_rad, dec_center_rad, star.ra_rad, star.dec_rad);
         // Filter by magnitude and angular separation

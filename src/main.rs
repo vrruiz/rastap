@@ -1,12 +1,10 @@
 use std::{
-    error::Error,
     io,
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
 
 use env_logger;
-use log::{debug};
 
 mod gaia_db;
 mod hyg;

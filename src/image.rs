@@ -1,6 +1,5 @@
 use log::{debug};
 
-use crate::math;
 use crate::polygon;
 
 /// Star position in image
@@ -21,7 +20,7 @@ pub struct Image {
 
 /// Converts the image::Star structure to polygon::Star
 pub fn image_star_to_polygon(star_list: &Vec<ImageStar>, scale_app: f64) -> Vec<polygon::Star> {
-    let scale_rad = math::degrees_to_radians(scale_app / 60.0 / 60.0);
+    let scale_rad = (scale_app / 60.0 / 60.0).to_radians();
     let mut pol_star_list = Vec::new();
     debug!("Image Star to Polygon > Star list:{} Scale \"pp:{} Scale rpp:{}", star_list.len(), scale_app, scale_rad);
     for (i, star) in star_list.iter().enumerate() {
