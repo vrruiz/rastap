@@ -31,6 +31,17 @@ pub fn read_stars_from_file(ra_center: f64, dec_center: f64, radii: f64, magnitu
     let mut star_list: Vec<polygon::Star> = Vec::new();
     let file = File::open("mini-gaia-dr2.db").unwrap();
     let mut reader = BufReader::new(file); // Buffered read
+    // Read headers
+    let mut headers = Vec::<String>::new();
+    for _i in 0..3 {
+        let mut length = [0u8;1];
+        let mut string = [0u8;255];
+        reader.read_exact(&mut length).unwrap();
+        reader.read_exact(&mut string).unwrap();
+        headers.push(String::from_utf8(string[0..length[0] as usize].to_vec()).unwrap());
+    }
+    // TODO: Parse headers
+    // Read stars
     let mut star_bin = [0u8;28];
     let mut n = 0u64;
     loop {
